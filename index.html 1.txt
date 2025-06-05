@@ -1,0 +1,93 @@
+// FRONTEND + BACKEND STORE (React + Express + Fake Tokens)
+
+// === FRONTEND (React) ===
+// File: frontend/src/App.jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+export default function App() {
+  const [items, setItems] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [tokens, setTokens] = useState(1000);
+
+  useEffect(() => {
+    axios.get('http://localhost:5000/items')
+      .then(res => setItems(res.data))
+      .catch(err => console.error(err));
+  }, []);
+
+  const buyItem = (item) => {
+    if (tokens >= item.price) {
+      setCart([...cart, item]);
+      setTokens(tokens - item.price);
+      axios.post('http://localhost:5000/purchase', { itemId: item.id })
+        .then(res => console.log(res.data))
+        .catch(err => console.error(err));
+    } else {
+      alert("Not enough tokens!");
+    }
+  };
+
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-4">Roblox Item Store</h1>
+      <p className="mb-4">Your Tokens: <strong>{tokens}</strong></p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {items.map(item => (
+          <div key={item.id} className="border rounded p-4">
+            <img src={item.img} alt={item.name} className="w-24 h-24 object-contain mb-2" />
+            <h2 className="text-xl font-semibold">{item.name}</h2>
+            <p>{item.price} Tokens</p>
+            <button className="mt-2 px-4 py-2 bg-blue-500 text-white rounded" onClick={() => buyItem(item)}>Buy</button>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6">
+        <h2 className="text-2xl font-bold">Cart</h2>
+        <ul>
+          {cart.map((item, idx) => <li key={idx}>{item.name} - {item.price} Tokens</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// === BACKEND (Node.js + Express) ===
+// File: backend/server.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+const items = [
+  { id: 1, name: "Rainbow Sword", price: 150, img: "https://via.placeholder.com/100?text=Sword" },
+  { id: 2, name: "Golden Wings", price: 300, img: "https://via.placeholder.com/100?text=Wings" },
+  { id: 3, name: "Stealth Cloak", price: 200, img: "https://via.placeholder.com/100?text=Cloak" },
+];
+
+app.get('/items', (req, res) => {
+  res.json(items);
+});
+
+app.post('/purchase', (req, res) => {
+  const { itemId } = req.body;
+  const item = items.find(i => i.id === itemId);
+  if (item) {
+    res.json({ message: `Purchased ${item.name}` });
+  } else {
+    res.status(404).json({ error: 'Item not found' });
+  }
+});
+
+app.listen(5000, () => console.log('Server running on http://localhost:5000'));
+
+// === START INSTRUCTIONS ===
+// 1. Run backend:
+//    cd backend && npm init -y && npm install express cors && node server.js
+
+// 2. Run frontend:
+//    cd frontend && npm create vite@latest && npm install axios && npm run dev
+
+// Make sure to set Vite proxy or allow CORS from frontend.
